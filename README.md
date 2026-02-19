@@ -65,7 +65,6 @@ A modern bookmark manager built with Next.js, Supabase, and Tailwind CSS. Save a
    - Go to Authentication - Providers in your Supabase dashboard
    - Enable Google provider
    - Add your Google OAuth credentials
-   - Set redirect URL to `http://localhost:3000/auth/callback` (for local development)
 
 6. **Run the development server**
    ```bash
@@ -76,3 +75,36 @@ A modern bookmark manager built with Next.js, Supabase, and Tailwind CSS. Save a
    ```
    http://localhost:3000
    ```
+
+## Problems Faced and Solutions
+
+During the development of this project, I encountered a few interesting challenges. Here's how I solved them:
+
+### 1. Real-time Updates for INSERT Events Not Triggering
+
+**Problem:**
+I set up a Supabase Realtime subscription to the `bookmarks` table. While `DELETE` events were being received by the client instantly, `INSERT` events (creating a new bookmark) were not triggering the subscription callback in other tabs.
+
+**Investigation:**
+- I verified the client-side subscription code was correct.
+- I confirmed the `INSERT` operation was successful in the database.
+- I suspected Row Level Security (RLS) policies were involved.
+
+**Solution:**
+The issue was indeed due to RLS policies. The `INSERT` event payload was being filtered out because the new row wasn't immediately "visible" to the subscriber under the existing policy during the transaction snapshot used by Realtime.
+I fixed this by refining the RLS policies in Supabase to ensure that users have full access to their own rows for all operations (`INSERT`, `SELECT`, `UPDATE`, `DELETE`), and ensuring the `supabase_realtime` publication was correctly configured with `replica identity full`.
+
+### 2. Production Redirection to Localhost
+
+**Problem:**
+After deploying the application to Vercel, Google OAuth login would initiate correctly, but after successful authentication, users were redirected to:
+   http://localhost:3000
+instead of the production domain.
+
+**Investigation:**
+- Verified Supabase Site URL and Redirect URLs configuration.
+- I looked Supabase Auth configuration.
+- Found URL set to http://localhost:3000 in the Redirect URLs.
+
+**Solution:**
+I updated the Redirect URLs to include the production domain.
